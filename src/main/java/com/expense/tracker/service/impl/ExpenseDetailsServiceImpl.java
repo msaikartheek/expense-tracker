@@ -11,6 +11,7 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.MatchOperation;
@@ -41,6 +42,13 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
     SourceDestinationMapper mapper;
     ReactiveMongoTemplate mongoTemplate;
 
+    /**
+     * Instantiates a new Expense details service.
+     *
+     * @param detailsRepository the details repository
+     * @param mapper            the mapper
+     * @param mongoTemplate     the mongo template
+     */
     @Autowired
     public ExpenseDetailsServiceImpl(ExpenseDetailsRepository detailsRepository, SourceDestinationMapper mapper, ReactiveMongoTemplate mongoTemplate) {
         this.detailsRepository = detailsRepository;
@@ -68,7 +76,7 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
      */
     @Override
     public Flux<ExpenseDetailsDto> getAllExpenseDetails(ExpenseRequest expenseRequest) {
-        Flux<ExpenseDetails> expenseDetailsFlux = detailsRepository.findAllByUserIdAndType(expenseRequest.userId(),expenseRequest.type());
+        Flux<ExpenseDetails> expenseDetailsFlux = detailsRepository.findAllByUserIdAndType(expenseRequest.userId(), expenseRequest.type());
         return expenseDetailsFlux.map(mapper::entityToDto);
     }
 
@@ -80,7 +88,7 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
     public Mono<ChartsResponse> getExpenseChartDetails(ExpenseRequest expenseRequest) {
         LocalDate startDate = null;
         LocalDate endDate = null;
-        if(Objects.isNull(expenseRequest.startDate()) && Objects.isNull(expenseRequest.endDate())) {
+        if (Objects.isNull(expenseRequest.startDate()) && Objects.isNull(expenseRequest.endDate())) {
             switch (expenseRequest.timeline()) {
                 case "PAST_MONTH" -> {
                     startDate = LocalDate.now().minusMonths(1);
@@ -108,23 +116,33 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
                 }
                 default -> throw new IllegalStateException("Unexpected value: " + expenseRequest.timeline());
             }
-        }else{
+        } else {
             startDate = expenseRequest.startDate();
             endDate = expenseRequest.endDate();
         }
-        log.info("Start Date >>> {}",startDate);
-        log.info("End Date >>> {}",endDate);
+        log.info("Start Date >>> {}", startDate);
+        log.info("End Date >>> {}", endDate);
         MatchOperation matchOperation = Aggregation.match(Criteria.where("userId")
                 .is(expenseRequest.userId())
-                        .and("type").is(expenseRequest.type())
+                .and("type").is(expenseRequest.type())
                 .and("date").gte(startDate).lte(endDate));
-        ProjectionOperation projectionOperation = Aggregation.project("date","amount","category","type").andExclude("_id");
-        Aggregation aggregation = newAggregation(matchOperation,projectionOperation);
-        Flux<ExpenseDetails> aggResults = mongoTemplate.aggregate(aggregation,"expenseDetails",ExpenseDetails.class);
+        ProjectionOperation projectionOperation = Aggregation.project("date", "amount", "category", "type").andExclude("_id");
+        Aggregation aggregation = newAggregation(matchOperation, projectionOperation);
+        Flux<ExpenseDetails> aggResults = mongoTemplate.aggregate(aggregation, "expenseDetails", ExpenseDetails.class);
         return aggResults.collectList().flatMap(res -> {
-          Map<String, Double> categoryTotal = res.stream().collect(Collectors.groupingBy(ExpenseDetails::getCategory,Collectors.summingDouble(ExpenseDetails::getAmount)));
-          Double totalAmount = res.stream().mapToDouble(ExpenseDetails::getAmount).sum();
-            return Mono.justOrEmpty(new ChartsResponse(res,categoryTotal,totalAmount));
+            Map<String, Double> categoryTotal = res.stream().collect(Collectors.groupingBy(ExpenseDetails::getCategory, Collectors.summingDouble(ExpenseDetails::getAmount)));
+            Double totalAmount = res.stream().mapToDouble(ExpenseDetails::getAmount).sum();
+            return Mono.justOrEmpty(new ChartsResponse(res, categoryTotal, totalAmount));
         });
+    }
+
+    /**
+     * @param expenseRequest
+     * @return
+     */
+    @Override
+    public Flux<ExpenseDetailsDto> getLatestThreeDetails(ExpenseRequest expenseRequest) {
+        Flux<ExpenseDetails> expenseDetailsFlux = detailsRepository.findByUserIdAndTypeOrderByDateDesc(expenseRequest.userId(), expenseRequest.type(), PageRequest.of(0, 3));
+        return expenseDetailsFlux.map(mapper::entityToDto);
     }
 }

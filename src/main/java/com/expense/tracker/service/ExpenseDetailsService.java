@@ -28,5 +28,19 @@ public interface ExpenseDetailsService {
      */
     Flux<ExpenseDetailsDto> getAllExpenseDetails(ExpenseRequest expenseRequest);
 
+    /**
+     * Gets expense chart details.
+     *
+     * @param expenseRequest the expense request
+     * @return the expense chart details
+     */
     Mono<ChartsResponse> getExpenseChartDetails(ExpenseRequest expenseRequest);
+
+    /**
+     * Gets latest three details.
+     *
+     * @param expenseRequest the expense request
+     * @return the latest three details
+     */
+    Flux<ExpenseDetailsDto> getLatestThreeDetails(ExpenseRequest expenseRequest);
 }

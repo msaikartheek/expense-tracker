@@ -45,8 +45,25 @@ public class ExpenseTrackerController {
         return ResponseEntity.ok(expenseDetailsService.getAllExpenseDetails(expenseRequest));
     }
 
+    /**
+     * All expenses chart response entity.
+     *
+     * @param expenseRequest the expense request
+     * @return the response entity
+     */
     @GetMapping("/expenses/chart")
     public ResponseEntity<Mono<ChartsResponse>> allExpensesChart(ExpenseRequest expenseRequest) {
         return ResponseEntity.ok(expenseDetailsService.getExpenseChartDetails(expenseRequest));
+    }
+
+    /**
+     * Gets latest three expenses.
+     *
+     * @param expenseRequest the expense request
+     * @return the latest three expenses
+     */
+    @GetMapping("/expenses/latestThree")
+    public ResponseEntity<Flux<ExpenseDetailsDto>> getLatestThreeExpenses(ExpenseRequest expenseRequest) {
+        return ResponseEntity.ok(expenseDetailsService.getLatestThreeDetails(expenseRequest));
     }
 }
