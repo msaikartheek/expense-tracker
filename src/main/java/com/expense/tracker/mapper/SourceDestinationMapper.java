@@ -1,10 +1,11 @@
 package com.expense.tracker.mapper;
 
+import com.expense.tracker.dto.ClientDetailsDto;
 import com.expense.tracker.dto.ExpenseDetailsDto;
+import com.expense.tracker.dto.response.ClientsDropDownResponse;
+import com.expense.tracker.entity.ClientDetails;
 import com.expense.tracker.entity.ExpenseDetails;
-import org.mapstruct.InjectionStrategy;
-import org.mapstruct.Mapper;
-import org.mapstruct.MappingConstants;
+import org.mapstruct.*;
 import org.mapstruct.factory.Mappers;
 import reactor.core.publisher.Mono;
 
@@ -35,4 +36,25 @@ public interface SourceDestinationMapper {
      * @return the expense details dto
      */
     ExpenseDetailsDto entityToDto(ExpenseDetails expenseDetails);
+
+    /**
+     * Client dto to entity client details.
+     *
+     * @param clientDetailsDto the client details dto
+     * @return the client details
+     */
+    ClientDetails clientDtoToEntity(ClientDetailsDto clientDetailsDto);
+
+    /**
+     * Client entity to dto client details dto.
+     *
+     * @param clientDetails the client details
+     * @return the client details dto
+     */
+    ClientDetailsDto clientEntityToDto(ClientDetails clientDetails);
+
+    @BeanMapping(ignoreByDefault = true)
+    @Mapping(target="name", source = "name")
+    @Mapping(target="value", source = "id")
+    ClientsDropDownResponse specifyFieldsToDto(ClientDetails clientDetails);
 }

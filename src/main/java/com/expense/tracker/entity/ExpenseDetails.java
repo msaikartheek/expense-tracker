@@ -17,13 +17,15 @@ import java.time.LocalDateTime;
 @Data
 public class ExpenseDetails {
     @Id
-    @Indexed
     String id;
     LocalDate date;
     Double amount;
     String type;
     String category;
     String comments;
-    @Indexed
     String userId;
+    String mode;
+    String transactionType;
+    String clientId;
+
 }

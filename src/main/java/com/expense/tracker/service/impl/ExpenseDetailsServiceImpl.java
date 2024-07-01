@@ -76,7 +76,7 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
      */
     @Override
     public Flux<ExpenseDetailsDto> getAllExpenseDetails(ExpenseRequest expenseRequest) {
-        Flux<ExpenseDetails> expenseDetailsFlux = detailsRepository.findAllByUserIdAndType(expenseRequest.userId(), expenseRequest.type());
+        Flux<ExpenseDetails> expenseDetailsFlux = detailsRepository.findAllByUserIdAndTypeAndTransactionType(expenseRequest.userId(), expenseRequest.type(),expenseRequest.transactionType());
         return expenseDetailsFlux.map(mapper::entityToDto);
     }
 
@@ -110,11 +110,10 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
                     startDate = LocalDate.now().minusMonths(6);
                     endDate = startDate.plusMonths(6).atStartOfDay().toLocalDate();
                 }
-                case null -> {
+                case null, default -> {
                     startDate = LocalDate.now().withDayOfMonth(1);
                     endDate = LocalDate.now();
                 }
-                default -> throw new IllegalStateException("Unexpected value: " + expenseRequest.timeline());
             }
         } else {
             startDate = expenseRequest.startDate();
@@ -126,13 +125,22 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
                 .is(expenseRequest.userId())
                 .and("type").is(expenseRequest.type())
                 .and("date").gte(startDate).lte(endDate));
-        ProjectionOperation projectionOperation = Aggregation.project("date", "amount", "category", "type").andExclude("_id");
+        ProjectionOperation projectionOperation = Aggregation.project("date", "amount", "category", "type","transactionType").andExclude("_id");
         Aggregation aggregation = newAggregation(matchOperation, projectionOperation);
         Flux<ExpenseDetails> aggResults = mongoTemplate.aggregate(aggregation, "expenseDetails", ExpenseDetails.class);
         return aggResults.collectList().flatMap(res -> {
             Map<String, Double> categoryTotal = res.stream().collect(Collectors.groupingBy(ExpenseDetails::getCategory, Collectors.summingDouble(ExpenseDetails::getAmount)));
-            Double totalAmount = res.stream().mapToDouble(ExpenseDetails::getAmount).sum();
-            return Mono.justOrEmpty(new ChartsResponse(res, categoryTotal, totalAmount));
+
+            Double creditedTotalAmount = res.stream()
+                    .filter(d -> d.getTransactionType() != null && d.getTransactionType().equalsIgnoreCase("Credited"))
+                    .mapToDouble(ExpenseDetails::getAmount)
+                    .sum();
+
+            Double debitedTotalAmount =  res.stream()
+                    .filter(d -> d.getTransactionType() != null && d.getTransactionType().equalsIgnoreCase("Debited"))
+                    .mapToDouble(ExpenseDetails::getAmount)
+                    .sum();
+            return Mono.justOrEmpty(new ChartsResponse(null, categoryTotal, creditedTotalAmount, debitedTotalAmount));
         });
     }
 

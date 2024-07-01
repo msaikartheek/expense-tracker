@@ -24,6 +24,16 @@ public interface ExpenseDetailsRepository extends ReactiveMongoRepository<Expens
     Flux<ExpenseDetails> findAllByUserIdAndType(String UserId,String type);
 
     /**
+     * Find all by user id and type and transaction type flux.
+     *
+     * @param UserId          the user id
+     * @param type            the type
+     * @param transactionType the transaction type
+     * @return the flux
+     */
+    Flux<ExpenseDetails> findAllByUserIdAndTypeAndTransactionType(String UserId,String type,String transactionType);
+
+    /**
      * Find by user id and type order by date desc flux.
      *
      * @param UserId   the user id

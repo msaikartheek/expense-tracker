@@ -1,15 +1,10 @@
-package com.expense.tracker.dto;
+package com.expense.tracker.dto.request;
 
-import lombok.Getter;
 import lombok.NonNull;
-import lombok.Setter;
 
 import java.time.LocalDate;
 
-@Getter
-@Setter
-public class ExpenseDetailsDto {
-    String id;
+public class ExpenseDetailsRequest {
     LocalDate date;
     Double amount;
     String type;
@@ -18,6 +13,4 @@ public class ExpenseDetailsDto {
     String comments;
     String userId;
     String mode;
-    String transactionType;
-    String clientId;
 }
