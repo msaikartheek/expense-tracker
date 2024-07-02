@@ -4,7 +4,10 @@ import com.expense.tracker.dto.ClientDetailsDto;
 import com.expense.tracker.dto.response.ClientsDropDownResponse;
 import com.expense.tracker.entity.ClientDetails;
 import com.expense.tracker.service.IClientDetailsService;
+import jakarta.validation.Valid;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
@@ -16,6 +19,7 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/api/v1/client")
 @AllArgsConstructor
+@FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
 public class ClientDetailsController {
 
     /**
@@ -52,7 +56,7 @@ public class ClientDetailsController {
      * @return the response entity
      */
     @PostMapping("/create")
-    public ResponseEntity<Mono<ClientDetailsDto>> createNewClients(@RequestBody ClientDetails clientDetails) {
+    public ResponseEntity<Mono<ClientDetailsDto>> createNewClients(@Valid @RequestBody ClientDetailsDto clientDetails) {
         return ResponseEntity.ok(clientDetailsService.createNewClient(clientDetails));
     }
 }

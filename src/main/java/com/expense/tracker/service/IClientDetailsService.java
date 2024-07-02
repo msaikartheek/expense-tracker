@@ -2,7 +2,6 @@ package com.expense.tracker.service;
 
 import com.expense.tracker.dto.ClientDetailsDto;
 import com.expense.tracker.dto.response.ClientsDropDownResponse;
-import com.expense.tracker.entity.ClientDetails;
 import org.springframework.cache.annotation.Cacheable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -28,6 +27,6 @@ public interface IClientDetailsService {
      *
      * @return the mono
      */
-    Mono<ClientDetailsDto> createNewClient(ClientDetails clientDetails);
+    Mono<ClientDetailsDto> createNewClient(ClientDetailsDto clientDetails);
 
 }

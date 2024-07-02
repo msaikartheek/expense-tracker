@@ -59,8 +59,9 @@ public class ClientDetailsServiceImpl implements IClientDetailsService {
      * @return the mono
      */
     @Override
-    public Mono<ClientDetailsDto> createNewClient(ClientDetails clientDetails) {
-        return clientDetailsRepository.save(clientDetails).mapNotNull(sourceDestinationMapper::clientEntityToDto);
+    public Mono<ClientDetailsDto> createNewClient(ClientDetailsDto clientDetails) {
+       ClientDetails clientDetails1 =  sourceDestinationMapper.clientDtoToEntity(clientDetails);
+        return clientDetailsRepository.save(clientDetails1).mapNotNull(sourceDestinationMapper::clientEntityToDto);
     }
 
 }
