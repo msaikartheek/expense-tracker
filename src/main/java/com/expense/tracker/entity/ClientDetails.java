@@ -1,6 +1,7 @@
 package com.expense.tracker.entity;
 
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.annotation.Id;
@@ -16,10 +17,12 @@ public class ClientDetails {
     @Id
     @Indexed
     String id;
+    @NotNull
     String name;
     String email;
+    @NotNull
     String phoneNumber;
     String userId;
-//    List<ProjectDetails> projectDetails;
+    List<ProjectDetails> projectDetails;
 
 }

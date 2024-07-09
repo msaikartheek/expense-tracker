@@ -26,21 +26,23 @@ public interface ExpenseDetailsService {
      * @param expenseRequest the expense request
      * @return the all expense details
      */
-    Flux<ExpenseDetailsDto> getAllExpenseDetails(ExpenseRequest expenseRequest);
+    Flux<ExpenseDetailsDto> getAllExpenseDetails(ExpenseRequest expenseRequest, String userId);
 
     /**
      * Gets expense chart details.
      *
      * @param expenseRequest the expense request
+     * @param uid
      * @return the expense chart details
      */
-    Mono<ChartsResponse> getExpenseChartDetails(ExpenseRequest expenseRequest);
+    Mono<ChartsResponse> getExpenseChartDetails(ExpenseRequest expenseRequest, String uid);
 
     /**
      * Gets latest three details.
      *
      * @param expenseRequest the expense request
+     * @param userId
      * @return the latest three details
      */
-    Flux<ExpenseDetailsDto> getLatestThreeDetails(ExpenseRequest expenseRequest);
+    Flux<ExpenseDetailsDto> getLatestThreeDetails(ExpenseRequest expenseRequest, String userId);
 }

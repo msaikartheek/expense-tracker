@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.UUID;
+
 @Service
 @Slf4j
 @FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
@@ -60,8 +62,20 @@ public class ClientDetailsServiceImpl implements IClientDetailsService {
      */
     @Override
     public Mono<ClientDetailsDto> createNewClient(ClientDetailsDto clientDetails) {
-       ClientDetails clientDetails1 =  sourceDestinationMapper.clientDtoToEntity(clientDetails);
+        clientDetails.getProjects().stream().peek(clientDetail -> clientDetail.setId(UUID.randomUUID().toString())).toList();
+        ClientDetails clientDetails1 = sourceDestinationMapper.clientDtoToEntity(clientDetails);
         return clientDetailsRepository.save(clientDetails1).mapNotNull(sourceDestinationMapper::clientEntityToDto);
+    }
+
+    /**
+     * Delete client details mono.
+     *
+     * @param clientId the client id
+     * @return the mono
+     */
+    @Override
+    public Mono<Void> deleteClientDetails(String clientId) {
+        return clientDetailsRepository.deleteById(clientId);
     }
 
 }

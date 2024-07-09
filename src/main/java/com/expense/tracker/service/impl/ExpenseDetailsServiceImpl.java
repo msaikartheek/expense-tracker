@@ -75,17 +75,18 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
      * @return the all expense details
      */
     @Override
-    public Flux<ExpenseDetailsDto> getAllExpenseDetails(ExpenseRequest expenseRequest) {
-        Flux<ExpenseDetails> expenseDetailsFlux = detailsRepository.findAllByUserIdAndTypeAndTransactionType(expenseRequest.userId(), expenseRequest.type(),expenseRequest.transactionType());
+    public Flux<ExpenseDetailsDto> getAllExpenseDetails(ExpenseRequest expenseRequest, String userId) {
+        Flux<ExpenseDetails> expenseDetailsFlux = detailsRepository.findAllByUserIdAndTypeAndTransactionType(userId, expenseRequest.type(),expenseRequest.transactionType());
         return expenseDetailsFlux.map(mapper::entityToDto);
     }
 
     /**
      * @param expenseRequest
+     * @param uid
      * @return
      */
     @Override
-    public Mono<ChartsResponse> getExpenseChartDetails(ExpenseRequest expenseRequest) {
+    public Mono<ChartsResponse> getExpenseChartDetails(ExpenseRequest expenseRequest, String uid) {
         LocalDate startDate = null;
         LocalDate endDate = null;
         if (Objects.isNull(expenseRequest.startDate()) && Objects.isNull(expenseRequest.endDate())) {
@@ -122,7 +123,7 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
         log.info("Start Date >>> {}", startDate);
         log.info("End Date >>> {}", endDate);
         MatchOperation matchOperation = Aggregation.match(Criteria.where("userId")
-                .is(expenseRequest.userId())
+                .is(uid)
                 .and("type").is(expenseRequest.type())
                 .and("date").gte(startDate).lte(endDate));
         ProjectionOperation projectionOperation = Aggregation.project("date", "amount", "category", "type","transactionType").andExclude("_id");
@@ -146,11 +147,12 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
 
     /**
      * @param expenseRequest
+     * @param userId
      * @return
      */
     @Override
-    public Flux<ExpenseDetailsDto> getLatestThreeDetails(ExpenseRequest expenseRequest) {
-        Flux<ExpenseDetails> expenseDetailsFlux = detailsRepository.findByUserIdAndTypeOrderByDateDesc(expenseRequest.userId(), expenseRequest.type(), PageRequest.of(0, 3));
+    public Flux<ExpenseDetailsDto> getLatestThreeDetails(ExpenseRequest expenseRequest, String userId) {
+        Flux<ExpenseDetails> expenseDetailsFlux = detailsRepository.findByUserIdAndTypeOrderByDateDesc(userId, expenseRequest.type(), PageRequest.of(0, 3));
         return expenseDetailsFlux.map(mapper::entityToDto);
     }
 }
