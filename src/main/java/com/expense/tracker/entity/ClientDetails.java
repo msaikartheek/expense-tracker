@@ -23,6 +23,6 @@ public class ClientDetails {
     @NotNull
     String phoneNumber;
     String userId;
-    List<ProjectDetails> projectDetails;
+    List<ProjectDetails> projects;
 
 }

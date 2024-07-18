@@ -32,6 +32,7 @@ public class FirebaseTokenFilter extends OncePerRequestFilter {
         String idToken = token.substring(7);
         try {
             FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+
             var uid = decodedToken.getUid();
             var email = decodedToken.getEmail();
             log.info("UID - {} ",uid);

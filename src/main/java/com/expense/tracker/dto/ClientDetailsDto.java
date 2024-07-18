@@ -1,7 +1,6 @@
 package com.expense.tracker.dto;
 
 
-import com.expense.tracker.entity.ProjectDetails;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -22,6 +21,6 @@ public class ClientDetailsDto {
     String phoneNumber;
     String userId;
     @Size(min = 1,message = "Please fill at least one project details")
-    List<ProjectDetails> projects;
-
+    @NotNull
+    List<ProjectDetailsDto> projects;
 }
