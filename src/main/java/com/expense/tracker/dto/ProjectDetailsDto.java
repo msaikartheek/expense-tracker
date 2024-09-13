@@ -16,11 +16,13 @@ public class ProjectDetailsDto {
     //    List<ExpenseDetails> expenseDetails;
 //    BudgetDetails budgetDetails;
     String id;
-    @NotNull(message = "Project name cannot be null")
-    String projectName;
-    String projectDescription;
-    Double expectedBudget;
+//    @NotNull(message = "Project name cannot be null")
+//    String projectName;
+//    String projectDescription;
+//    Double expectedBudget;
     LocalDate startDate;
     LocalDate endDate;
+    String status;
+    Integer days;
 
 }

@@ -44,4 +44,6 @@ public interface IClientDetailsService {
      * @return the mono
      */
     Mono<Void> deleteClientDetails(String clientId);
+
+    Mono<ClientDetailsDto> updateClientDetails(ClientDetailsDto clientDetails);
 }

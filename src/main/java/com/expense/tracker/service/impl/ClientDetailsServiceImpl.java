@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.UUID;
+import java.util.Arrays;
 
 @Service
 @Slf4j
@@ -62,7 +62,7 @@ public class ClientDetailsServiceImpl implements IClientDetailsService {
      */
     @Override
     public Mono<ClientDetailsDto> createNewClient(ClientDetailsDto clientDetails) {
-        clientDetails.getProjects().stream().peek(clientDetail -> clientDetail.setId(UUID.randomUUID().toString())).toList();
+       // clientDetails.getProjects().stream().peek(clientDetail -> clientDetail.setId(UUID.randomUUID().toString())).toList();
         ClientDetails clientDetails1 = sourceDestinationMapper.clientDtoToEntity(clientDetails);
         return clientDetailsRepository.save(clientDetails1).mapNotNull(sourceDestinationMapper::clientEntityToDto);
     }
@@ -75,7 +75,17 @@ public class ClientDetailsServiceImpl implements IClientDetailsService {
      */
     @Override
     public Mono<Void> deleteClientDetails(String clientId) {
-        return clientDetailsRepository.deleteById(clientId);
+        return clientDetailsRepository.deleteAllById(Arrays.asList(clientId));
+    }
+
+    /**
+     * @param clientDetails
+     * @return
+     */
+    @Override
+    public Mono<ClientDetailsDto> updateClientDetails(ClientDetailsDto clientDetails) {
+        return clientDetailsRepository.save(sourceDestinationMapper.clientDtoToEntity(clientDetails))
+                .mapNotNull(sourceDestinationMapper::clientEntityToDto);
     }
 
 }

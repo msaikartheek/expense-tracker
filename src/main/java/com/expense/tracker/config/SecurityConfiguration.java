@@ -37,7 +37,7 @@ public class SecurityConfiguration   {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("https://www.interiorsbyagi.in")  // Add the origins you want to allow
+                        .allowedOrigins("https://www.interiorsbyagi.in","http://localhost:4200","https://expense-tracker-1710.web.app")  // Add the origins you want to allow
                         //.allowedOrigins("http://localhost:8100")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")

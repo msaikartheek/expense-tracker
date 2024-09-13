@@ -9,7 +9,7 @@ import reactor.core.publisher.Mono;
 /**
  * The interface Expense details service.
  */
-public interface ExpenseDetailsService {
+public interface IExpenseDetailsService {
 
 
     /**
@@ -45,4 +45,12 @@ public interface ExpenseDetailsService {
      * @return the latest three details
      */
     Flux<ExpenseDetailsDto> getLatestThreeDetails(ExpenseRequest expenseRequest, String userId);
+
+    /**
+     * Deleted the exisitng expenses
+     *
+     * @param id id
+     * @return confirmation string
+     */
+    Mono<String> deleteExpense(String id);
 }

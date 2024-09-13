@@ -31,7 +31,7 @@ public interface ExpenseDetailsRepository extends ReactiveMongoRepository<Expens
      * @param transactionType the transaction type
      * @return the flux
      */
-    Flux<ExpenseDetails> findAllByUserIdAndTypeAndTransactionType(String UserId,String type,String transactionType);
+    Flux<ExpenseDetails> findAllByUserIdAndTypeAndTransactionTypeOrderByCreatedDate(String UserId,String type,String transactionType);
 
     /**
      * Find by user id and type order by date desc flux.
@@ -42,4 +42,13 @@ public interface ExpenseDetailsRepository extends ReactiveMongoRepository<Expens
      * @return the flux
      */
     Flux<ExpenseDetails> findByUserIdAndTypeOrderByDateDesc(String UserId, String type, Pageable pageable);
+
+    /**
+     * Finds all user expenses based on UserId;
+     * @param userId
+     * @return
+     */
+    Flux<ExpenseDetails> findAllByUserIdOrderByCreatedDateDesc(String userId);
+
+    Flux<ExpenseDetails> findALLByUserIdAndClientIdOrderByDateDesc(String userId, String clientId);
 }

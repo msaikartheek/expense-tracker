@@ -26,6 +26,11 @@ public class ExpenseDetails {
     String userId;
     String mode;
     String transactionType;
+    String transactionStatus;
     String clientId;
+    Double paidAmount;
+    LocalDateTime createdDate;
+    LocalDateTime updatedDate;
+
 
 }

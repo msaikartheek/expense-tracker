@@ -5,8 +5,9 @@ import com.expense.tracker.dto.request.ExpenseRequest;
 import com.expense.tracker.dto.response.ChartsResponse;
 import com.expense.tracker.entity.ExpenseDetails;
 import com.expense.tracker.mapper.SourceDestinationMapper;
+import com.expense.tracker.repo.ClientDetailsRepository;
 import com.expense.tracker.repo.ExpenseDetailsRepository;
-import com.expense.tracker.service.ExpenseDetailsService;
+import com.expense.tracker.service.IExpenseDetailsService;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
@@ -18,10 +19,12 @@ import org.springframework.data.mongodb.core.aggregation.MatchOperation;
 import org.springframework.data.mongodb.core.aggregation.ProjectionOperation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,7 +36,7 @@ import static org.springframework.data.mongodb.core.aggregation.Aggregation.newA
 @Service
 @Slf4j
 @FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
-public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
+public class ExpenseDetailsServiceImpl implements IExpenseDetailsService {
 
     /**
      * The Details repository.
@@ -41,6 +44,7 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
     ExpenseDetailsRepository detailsRepository;
     SourceDestinationMapper mapper;
     ReactiveMongoTemplate mongoTemplate;
+    ClientDetailsRepository clientDetailsRepository;
 
     /**
      * Instantiates a new Expense details service.
@@ -50,10 +54,11 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
      * @param mongoTemplate     the mongo template
      */
     @Autowired
-    public ExpenseDetailsServiceImpl(ExpenseDetailsRepository detailsRepository, SourceDestinationMapper mapper, ReactiveMongoTemplate mongoTemplate) {
+    public ExpenseDetailsServiceImpl(ExpenseDetailsRepository detailsRepository, SourceDestinationMapper mapper, ReactiveMongoTemplate mongoTemplate, ClientDetailsRepository clientDetailsRepository) {
         this.detailsRepository = detailsRepository;
         this.mapper = mapper;
         this.mongoTemplate = mongoTemplate;
+        this.clientDetailsRepository = clientDetailsRepository;
     }
 
     /**
@@ -64,8 +69,16 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
      */
     @Override
     public Mono<ExpenseDetailsDto> saveExpenseDetails(ExpenseDetailsDto expenseDetailsDto) {
-        ExpenseDetails expenseDetail = detailsRepository.save(mapper.dtoToEntity(expenseDetailsDto)).block();
-        return Mono.just(mapper.entityToDto(expenseDetail));
+        if (StringUtils.hasText(expenseDetailsDto.getId())) {
+            expenseDetailsDto.setUpdatedDate(LocalDateTime.now());
+        }
+       return  detailsRepository.save(mapper.dtoToEntity(expenseDetailsDto)).map(eDetails -> {
+            if (eDetails != null) {
+                eDetails.setCreatedDate(LocalDateTime.now());
+            }
+            return mapper.entityToDto(eDetails);
+        });
+
     }
 
     /**
@@ -76,8 +89,52 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
      */
     @Override
     public Flux<ExpenseDetailsDto> getAllExpenseDetails(ExpenseRequest expenseRequest, String userId) {
-        Flux<ExpenseDetails> expenseDetailsFlux = detailsRepository.findAllByUserIdAndTypeAndTransactionType(userId, expenseRequest.type(),expenseRequest.transactionType());
-        return expenseDetailsFlux.map(mapper::entityToDto);
+        Flux<ExpenseDetails> expenseDetailsFlux = null;
+        if (Objects.nonNull(expenseRequest.type()) && Objects.nonNull(expenseRequest.transactionType())) {
+            expenseDetailsFlux = detailsRepository.findAllByUserIdAndTypeAndTransactionTypeOrderByCreatedDate(userId, expenseRequest.type(), expenseRequest.transactionType());
+            return expenseDetailsFlux.map(mapper::entityToDto);
+        } else if (StringUtils.hasText(expenseRequest.clientId())) {
+            return detailsRepository.findALLByUserIdAndClientIdOrderByDateDesc(userId,expenseRequest.clientId())
+                    .flatMap(expense -> clientDetailsRepository.findById(expense.getClientId())
+                    .map(client -> new ExpenseDetailsDto(
+                            expense.getId(),
+                            expense.getDate(),
+                            expense.getAmount(),
+                            expense.getType(),
+                            expense.getCategory(),
+                            expense.getComments(),
+                            expense.getUserId(),
+                            expense.getMode(),
+                            null,
+                            expense.getTransactionStatus(),
+                            expense.getClientId(),
+                            expense.getPaidAmount(),
+                            client.getName()
+                    )));
+        } else {
+            return detailsRepository.findAllByUserIdOrderByCreatedDateDesc(userId)
+                    .flatMap(expense -> clientDetailsRepository.findById(expense.getClientId())
+                            .map(client -> new ExpenseDetailsDto(
+                                    expense.getId(),
+                                    expense.getDate(),
+                                    expense.getAmount(),
+                                    expense.getType(),
+                                    expense.getCategory(),
+                                    expense.getComments(),
+                                    expense.getUserId(),
+                                    expense.getMode(),
+                                    null,
+                                    expense.getTransactionStatus(),
+                                    expense.getClientId(),
+                                    expense.getPaidAmount(),
+                                    client.getName()
+                            )));
+//           return detailsRepository.findAllByUserId(userId).flatMap(expense -> clientDetailsRepository.findById(expense.getClientId()))
+//                   .map(clientDetails -> new ExpenseDetailsDto().setDate());
+        }
+
+        //return expenseDetailsFlux.map(mapper::entityToDto);
+        // return null;
     }
 
     /**
@@ -122,26 +179,42 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
         }
         log.info("Start Date >>> {}", startDate);
         log.info("End Date >>> {}", endDate);
-        MatchOperation matchOperation = Aggregation.match(Criteria.where("userId")
-                .is(uid)
-                .and("type").is(expenseRequest.type())
-                .and("date").gte(startDate).lte(endDate));
-        ProjectionOperation projectionOperation = Aggregation.project("date", "amount", "category", "type","transactionType").andExclude("_id");
+        MatchOperation matchOperation;
+        if (StringUtils.hasText(expenseRequest.clientId())) {
+            matchOperation = Aggregation.match(Criteria.where("userId")
+                    .is(uid)
+                    .and("clientId").is(expenseRequest.clientId()));
+                    //.and("type").is(expenseRequest.type())
+                   // .and("date").gte(startDate).lte(endDate));
+        } else {
+            matchOperation = Aggregation.match(Criteria.where("userId")
+                    .is(uid)
+                    //.and("type").is(expenseRequest.type())
+                    .and("date").gte(startDate).lte(endDate));
+        }
+        ProjectionOperation projectionOperation = Aggregation.project("date", "amount", "category", "type", "transactionType").andExclude("_id");
         Aggregation aggregation = newAggregation(matchOperation, projectionOperation);
         Flux<ExpenseDetails> aggResults = mongoTemplate.aggregate(aggregation, "expenseDetails", ExpenseDetails.class);
         return aggResults.collectList().flatMap(res -> {
             Map<String, Double> categoryTotal = res.stream().collect(Collectors.groupingBy(ExpenseDetails::getCategory, Collectors.summingDouble(ExpenseDetails::getAmount)));
 
             Double creditedTotalAmount = res.stream()
-                    .filter(d -> d.getTransactionType() != null && d.getTransactionType().equalsIgnoreCase("Credited"))
+                    .filter(d -> d.getType() != null && d.getType().equalsIgnoreCase("credit"))
                     .mapToDouble(ExpenseDetails::getAmount)
                     .sum();
 
-            Double debitedTotalAmount =  res.stream()
-                    .filter(d -> d.getTransactionType() != null && d.getTransactionType().equalsIgnoreCase("Debited"))
+            Double pendingTotalAmount = res.stream()
+                    .filter(d -> d.getTransactionStatus() != null
+                            && d.getTransactionStatus().equalsIgnoreCase("pPaid"))
+                    .mapToDouble(ExpenseDetails::getPaidAmount)
+                    .sum();
+
+            Double debitedTotalAmount = res.stream()
+                    .filter(d -> d.getType() != null && d.getType().equalsIgnoreCase("debit"))
                     .mapToDouble(ExpenseDetails::getAmount)
                     .sum();
-            return Mono.justOrEmpty(new ChartsResponse(null, categoryTotal, creditedTotalAmount, debitedTotalAmount));
+
+            return Mono.justOrEmpty(new ChartsResponse(null, categoryTotal, creditedTotalAmount, (debitedTotalAmount-pendingTotalAmount),pendingTotalAmount));
         });
     }
 
@@ -154,5 +227,16 @@ public class ExpenseDetailsServiceImpl implements ExpenseDetailsService {
     public Flux<ExpenseDetailsDto> getLatestThreeDetails(ExpenseRequest expenseRequest, String userId) {
         Flux<ExpenseDetails> expenseDetailsFlux = detailsRepository.findByUserIdAndTypeOrderByDateDesc(userId, expenseRequest.type(), PageRequest.of(0, 3));
         return expenseDetailsFlux.map(mapper::entityToDto);
+    }
+
+    /**
+     * Deleted the exisitng expenses
+     *
+     * @param id
+     * @return
+     */
+    @Override
+    public Mono<String> deleteExpense(String id) {
+        return detailsRepository.deleteById(id).then(Mono.just("Expense successfully deleted"));
     }
 }

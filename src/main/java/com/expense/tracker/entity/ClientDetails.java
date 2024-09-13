@@ -1,6 +1,7 @@
 package com.expense.tracker.entity;
 
 
+import com.expense.tracker.dto.ProjectDetailsDto;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.experimental.FieldDefaults;
@@ -23,6 +24,8 @@ public class ClientDetails {
     @NotNull
     String phoneNumber;
     String userId;
-    List<ProjectDetails> projects;
+    ProjectAddressDetails address;
+    ProjectDetails projectDetails;
+    //List<ProjectDetails> projects;
 
 }

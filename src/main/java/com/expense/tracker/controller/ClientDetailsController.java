@@ -2,7 +2,6 @@ package com.expense.tracker.controller;
 
 import com.expense.tracker.dto.ClientDetailsDto;
 import com.expense.tracker.dto.response.ClientsDropDownResponse;
-import com.expense.tracker.entity.ClientDetails;
 import com.expense.tracker.service.IClientDetailsService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -33,12 +32,13 @@ public class ClientDetailsController {
     /**
      * Gets all client details.
      *
-     * @param userId the user id
+     *
      * @return the all client details
      */
     @GetMapping("/dropDown")
-    public ResponseEntity<Flux<ClientsDropDownResponse>> getAllClientDetailsDropDown(String userId) {
-        return ResponseEntity.ok(clientDetailsService.getAllClientsDropDown(userId));
+    public ResponseEntity<Flux<ClientsDropDownResponse>> getAllClientDetailsDropDown(HttpServletRequest servletRequest) {
+        log.info("*** Getting all clients drop down for user Id {} ***",servletRequest.getAttribute("uid").toString());
+        return ResponseEntity.ok(clientDetailsService.getAllClientsDropDown(servletRequest.getAttribute("uid").toString()));
     }
 
     /**
@@ -72,11 +72,17 @@ public class ClientDetailsController {
      * @param id the id
      * @return the response entity
      */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteClient(@PathVariable("id") String id) {
+    @DeleteMapping("/remove/{id}")
+    public ResponseEntity<Mono<String>> deleteClient(@PathVariable String id) {
         log.info("*** Delete the client details ***");
-        clientDetailsService.deleteClientDetails(id);
+        clientDetailsService.deleteClientDetails(id).subscribe();
         log.info("*** Client details with id {} is deleted ***",id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(Mono.just("Client details with id " + id + " is deleted"));
+    }
+
+    @PutMapping("/update")
+    public Mono<ClientDetailsDto> updateClient(@RequestBody ClientDetailsDto clientDetails) {
+        log.info("*** Update the client details ***");
+        return clientDetailsService.updateClientDetails(clientDetails);
     }
 }

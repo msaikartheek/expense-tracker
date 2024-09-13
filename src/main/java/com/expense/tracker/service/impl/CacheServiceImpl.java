@@ -21,7 +21,7 @@ public class CacheServiceImpl implements ICacheService {
      *
      */
     @Override
-    @Scheduled(cron = "0 0 12 ? * SUN *")
+    @Scheduled(cron = "0 0 0 * * *",zone = "Indian/Maldives")
     public void evictAllCache() {
         log.info("*** Evicting Cache ***");
 
