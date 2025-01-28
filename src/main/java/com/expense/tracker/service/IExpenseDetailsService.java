@@ -53,4 +53,13 @@ public interface IExpenseDetailsService {
      * @return confirmation string
      */
     Mono<String> deleteExpense(String id);
+
+    /**
+     * Returns the total record count for the expenses
+     *
+     * @param expenseRequest
+     * @param uid
+     * @return
+     */
+    Mono<Integer> getTotalRecordCount(ExpenseRequest expenseRequest, String uid);
 }

@@ -1,7 +1,9 @@
 package com.expense.tracker.repo;
 
 import com.expense.tracker.entity.ExpenseDetails;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Repository;
@@ -31,7 +33,7 @@ public interface ExpenseDetailsRepository extends ReactiveMongoRepository<Expens
      * @param transactionType the transaction type
      * @return the flux
      */
-    Flux<ExpenseDetails> findAllByUserIdAndTypeAndTransactionTypeOrderByCreatedDate(String UserId,String type,String transactionType);
+    Flux<ExpenseDetails> findAllByUserIdAndTypeAndTransactionType(String UserId,String type,String transactionType,Pageable pageable);
 
     /**
      * Find by user id and type order by date desc flux.
@@ -48,7 +50,9 @@ public interface ExpenseDetailsRepository extends ReactiveMongoRepository<Expens
      * @param userId
      * @return
      */
-    Flux<ExpenseDetails> findAllByUserIdOrderByCreatedDateDesc(String userId);
+    Flux<ExpenseDetails> findAllByUserId(String userId, Pageable pageable);
 
-    Flux<ExpenseDetails> findALLByUserIdAndClientIdOrderByDateDesc(String userId, String clientId);
+    Flux<ExpenseDetails> findALLByUserIdAndClientId(String userId, String clientId,Pageable pageable);
+
+    Flux<ExpenseDetails> findALLByUserIdAndClientIdOrderByDateDesc(String userId, String clientId, PageRequest pageRequest);
 }

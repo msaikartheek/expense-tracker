@@ -10,12 +10,14 @@ import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 @Service
 @Slf4j
@@ -75,7 +77,7 @@ public class ClientDetailsServiceImpl implements IClientDetailsService {
      */
     @Override
     public Mono<Void> deleteClientDetails(String clientId) {
-        return clientDetailsRepository.deleteAllById(Arrays.asList(clientId));
+        return clientDetailsRepository.deleteAllById(Collections.singletonList(clientId));
     }
 
     /**
@@ -86,6 +88,18 @@ public class ClientDetailsServiceImpl implements IClientDetailsService {
     public Mono<ClientDetailsDto> updateClientDetails(ClientDetailsDto clientDetails) {
         return clientDetailsRepository.save(sourceDestinationMapper.clientDtoToEntity(clientDetails))
                 .mapNotNull(sourceDestinationMapper::clientEntityToDto);
+    }
+
+    /**
+     * @param id
+     * @return
+     */
+    @Cacheable("clientsById")
+    @CacheEvict("clientsById")
+    @Override
+    public Mono<ClientDetailsDto> getClientDetailsById(String id) {
+        log.info("*** calling client details by id: {} *** ", id);
+        return clientDetailsRepository.findById(id).mapNotNull(sourceDestinationMapper::clientEntityToDto);
     }
 
 }

@@ -46,4 +46,6 @@ public interface IClientDetailsService {
     Mono<Void> deleteClientDetails(String clientId);
 
     Mono<ClientDetailsDto> updateClientDetails(ClientDetailsDto clientDetails);
+
+    Mono<ClientDetailsDto> getClientDetailsById(String id);
 }

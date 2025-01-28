@@ -27,7 +27,7 @@ public class ExpenseTrackerController {
     /**
      * The Expense details service.
      */
-    IExpenseDetailsService IExpenseDetailsService;
+    IExpenseDetailsService iExpenseDetailsService;
 
     /**
      * Create expense details response entity.
@@ -40,7 +40,15 @@ public class ExpenseTrackerController {
                                                                         HttpServletRequest servletRequest) {
         log.info("*** Saving expense details - {} ***", servletRequest.getAttribute("email"));
         expenseDetailsDto.setUserId(servletRequest.getAttribute("uid").toString());
-        return ResponseEntity.ok(IExpenseDetailsService.saveExpenseDetails(expenseDetailsDto));
+        return ResponseEntity.ok(iExpenseDetailsService.saveExpenseDetails(expenseDetailsDto));
+    }
+
+    @GetMapping("/total-count")
+    public ResponseEntity<Mono<Integer>> totalExpenseCount(ExpenseRequest expenseRequest, HttpServletRequest servletRequest) {
+        log.info("*** Total expense count - {} ***", servletRequest.getAttribute("uid"));
+
+        return ResponseEntity.ok(iExpenseDetailsService
+                .getTotalRecordCount(expenseRequest,servletRequest.getAttribute("uid").toString()));
     }
 
     /**
@@ -52,7 +60,7 @@ public class ExpenseTrackerController {
     @GetMapping
     public ResponseEntity<Flux<ExpenseDetailsDto>> allExpenses(ExpenseRequest expenseRequest, HttpServletRequest servletRequest) {
         log.info("*** Getting list of expenses for - {}", servletRequest.getAttribute("email"));
-        return ResponseEntity.ok(IExpenseDetailsService.getAllExpenseDetails(expenseRequest,
+        return ResponseEntity.ok(iExpenseDetailsService.getAllExpenseDetails(expenseRequest,
                 servletRequest.getAttribute("uid").toString()));
     }
 
@@ -66,7 +74,7 @@ public class ExpenseTrackerController {
     public ResponseEntity<Mono<ChartsResponse>> allExpensesChart(ExpenseRequest expenseRequest,
                                                                  HttpServletRequest servletRequest) {
         log.info("*** Getting chart data for all expenses ***");
-        return ResponseEntity.ok(IExpenseDetailsService.getExpenseChartDetails(expenseRequest,
+        return ResponseEntity.ok(iExpenseDetailsService.getExpenseChartDetails(expenseRequest,
                 servletRequest.getAttribute("uid").toString()));
     }
 
@@ -80,13 +88,13 @@ public class ExpenseTrackerController {
     public ResponseEntity<Flux<ExpenseDetailsDto>> getLatestThreeExpenses(ExpenseRequest expenseRequest,
                                                                           HttpServletRequest servletRequest) {
         log.info("*** Getting the latest three expenses  for loggedIn user - {} ***", servletRequest.getAttribute("email"));
-        return ResponseEntity.ok(IExpenseDetailsService.getLatestThreeDetails(expenseRequest,
+        return ResponseEntity.ok(iExpenseDetailsService.getLatestThreeDetails(expenseRequest,
                 servletRequest.getAttribute("uid").toString()));
     }
 
     @DeleteMapping("/remove/{id}")
     public ResponseEntity<Mono<String>> removeExpense(@PathVariable String id, HttpServletRequest servletRequest) {
         log.info("*** Removing expense with id - {}", id);
-        return ResponseEntity.ok(IExpenseDetailsService.deleteExpense(id));
+        return ResponseEntity.ok(iExpenseDetailsService.deleteExpense(id));
     }
 }

@@ -41,6 +41,11 @@ public class ClientDetailsController {
         return ResponseEntity.ok(clientDetailsService.getAllClientsDropDown(servletRequest.getAttribute("uid").toString()));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Mono<ClientDetailsDto>> getClientDetails(@PathVariable("id") String id, HttpServletRequest servletRequest ) {
+        log.info("*** Getting client details for  Id {} ***",id);
+        return ResponseEntity.ok(clientDetailsService.getClientDetailsById(id));
+    }
     /**
      * Gets all client details.
      *

@@ -11,10 +11,14 @@ import com.expense.tracker.service.IExpenseDetailsService;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.CountOperation;
 import org.springframework.data.mongodb.core.aggregation.MatchOperation;
 import org.springframework.data.mongodb.core.aggregation.ProjectionOperation;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -71,14 +75,11 @@ public class ExpenseDetailsServiceImpl implements IExpenseDetailsService {
     public Mono<ExpenseDetailsDto> saveExpenseDetails(ExpenseDetailsDto expenseDetailsDto) {
         if (StringUtils.hasText(expenseDetailsDto.getId())) {
             expenseDetailsDto.setUpdatedDate(LocalDateTime.now());
+        }else{
+            expenseDetailsDto.setCreatedDate(LocalDateTime.now());
         }
-       return  detailsRepository.save(mapper.dtoToEntity(expenseDetailsDto)).map(eDetails -> {
-            if (eDetails != null) {
-                eDetails.setCreatedDate(LocalDateTime.now());
-            }
-            return mapper.entityToDto(eDetails);
-        });
-
+        ExpenseDetails toEntity = mapper.dtoToEntity(expenseDetailsDto);
+        return  detailsRepository.save(toEntity).map(mapper::entityToDto);
     }
 
     /**
@@ -89,12 +90,25 @@ public class ExpenseDetailsServiceImpl implements IExpenseDetailsService {
      */
     @Override
     public Flux<ExpenseDetailsDto> getAllExpenseDetails(ExpenseRequest expenseRequest, String userId) {
+        log.info("** In all expense details **");
         Flux<ExpenseDetails> expenseDetailsFlux = null;
+        Pageable pageDetails = null;
+        if(null != expenseRequest.pageIndex() && null != expenseRequest.pageSize()) {
+            log.info("** In pagination details **");
+             pageDetails = PageRequest.of(expenseRequest.pageIndex(),expenseRequest.pageSize());
+        }
+
+
         if (Objects.nonNull(expenseRequest.type()) && Objects.nonNull(expenseRequest.transactionType())) {
-            expenseDetailsFlux = detailsRepository.findAllByUserIdAndTypeAndTransactionTypeOrderByCreatedDate(userId, expenseRequest.type(), expenseRequest.transactionType());
+
+            expenseDetailsFlux = detailsRepository
+                    .findAllByUserIdAndTypeAndTransactionType(userId, expenseRequest.type(),
+                            expenseRequest.transactionType(),pageDetails)
+                    .sort(Comparator.comparing(ExpenseDetails::getDate, Comparator.reverseOrder()));;
             return expenseDetailsFlux.map(mapper::entityToDto);
         } else if (StringUtils.hasText(expenseRequest.clientId())) {
-            return detailsRepository.findALLByUserIdAndClientIdOrderByDateDesc(userId,expenseRequest.clientId())
+            log.info("** In all expense details check with client id **");
+            return detailsRepository.findALLByUserIdAndClientId(userId,expenseRequest.clientId(),pageDetails)
                     .flatMap(expense -> clientDetailsRepository.findById(expense.getClientId())
                     .map(client -> new ExpenseDetailsDto(
                             expense.getId(),
@@ -110,9 +124,13 @@ public class ExpenseDetailsServiceImpl implements IExpenseDetailsService {
                             expense.getClientId(),
                             expense.getPaidAmount(),
                             client.getName()
-                    )));
+                    ))).sort(Comparator.comparing(ExpenseDetailsDto::getDate, Comparator.reverseOrder()));
         } else {
-            return detailsRepository.findAllByUserIdOrderByCreatedDateDesc(userId)
+            log.info("** In find all expense details with user Id **");
+           PageRequest  pageRequest = PageRequest.of(expenseRequest.pageIndex(),expenseRequest.pageSize(),
+                   Sort.by(Sort.Direction.DESC,"date"));
+            return detailsRepository.findAllByUserId(userId,
+                            pageRequest)
                     .flatMap(expense -> clientDetailsRepository.findById(expense.getClientId())
                             .map(client -> new ExpenseDetailsDto(
                                     expense.getId(),
@@ -128,7 +146,7 @@ public class ExpenseDetailsServiceImpl implements IExpenseDetailsService {
                                     expense.getClientId(),
                                     expense.getPaidAmount(),
                                     client.getName()
-                            )));
+                            ))).sort(Comparator.comparing(ExpenseDetailsDto::getDate, Comparator.reverseOrder()));
 //           return detailsRepository.findAllByUserId(userId).flatMap(expense -> clientDetailsRepository.findById(expense.getClientId()))
 //                   .map(clientDetails -> new ExpenseDetailsDto().setDate());
         }
@@ -192,7 +210,7 @@ public class ExpenseDetailsServiceImpl implements IExpenseDetailsService {
                     //.and("type").is(expenseRequest.type())
                     .and("date").gte(startDate).lte(endDate));
         }
-        ProjectionOperation projectionOperation = Aggregation.project("date", "amount", "category", "type", "transactionType").andExclude("_id");
+        ProjectionOperation projectionOperation = Aggregation.project("date", "amount", "category", "type", "transactionStatus","paidAmount").andExclude("_id");
         Aggregation aggregation = newAggregation(matchOperation, projectionOperation);
         Flux<ExpenseDetails> aggResults = mongoTemplate.aggregate(aggregation, "expenseDetails", ExpenseDetails.class);
         return aggResults.collectList().flatMap(res -> {
@@ -203,10 +221,16 @@ public class ExpenseDetailsServiceImpl implements IExpenseDetailsService {
                     .mapToDouble(ExpenseDetails::getAmount)
                     .sum();
 
+            Double partiallyPayment = res.stream()
+                    .filter(d -> d.getTransactionStatus() != null
+                            && (d.getTransactionStatus().equalsIgnoreCase("pPaid")))
+                    .mapToDouble(e -> (e.getAmount()-e.getPaidAmount()))
+                    .sum();
+
             Double pendingTotalAmount = res.stream()
                     .filter(d -> d.getTransactionStatus() != null
-                            && d.getTransactionStatus().equalsIgnoreCase("pPaid"))
-                    .mapToDouble(ExpenseDetails::getPaidAmount)
+                            && (d.getTransactionStatus().equalsIgnoreCase("pending")))
+                    .mapToDouble(e -> (e.getAmount()-e.getPaidAmount()))
                     .sum();
 
             Double debitedTotalAmount = res.stream()
@@ -214,7 +238,7 @@ public class ExpenseDetailsServiceImpl implements IExpenseDetailsService {
                     .mapToDouble(ExpenseDetails::getAmount)
                     .sum();
 
-            return Mono.justOrEmpty(new ChartsResponse(null, categoryTotal, creditedTotalAmount, (debitedTotalAmount-pendingTotalAmount),pendingTotalAmount));
+            return Mono.justOrEmpty(new ChartsResponse(null, categoryTotal, creditedTotalAmount, (debitedTotalAmount-partiallyPayment-pendingTotalAmount),(pendingTotalAmount+partiallyPayment),partiallyPayment));
         });
     }
 
@@ -225,7 +249,13 @@ public class ExpenseDetailsServiceImpl implements IExpenseDetailsService {
      */
     @Override
     public Flux<ExpenseDetailsDto> getLatestThreeDetails(ExpenseRequest expenseRequest, String userId) {
-        Flux<ExpenseDetails> expenseDetailsFlux = detailsRepository.findByUserIdAndTypeOrderByDateDesc(userId, expenseRequest.type(), PageRequest.of(0, 3));
+        if(StringUtils.hasText(expenseRequest.clientId())){
+            Flux<ExpenseDetails> expenseDetailsFlux = detailsRepository
+                    .findALLByUserIdAndClientIdOrderByDateDesc(userId, expenseRequest.clientId(), PageRequest.of(0, 3));
+            return expenseDetailsFlux.map(mapper::entityToDto);
+        }
+        Flux<ExpenseDetails> expenseDetailsFlux = detailsRepository
+                .findByUserIdAndTypeOrderByDateDesc(userId, expenseRequest.type(), PageRequest.of(0, 3));
         return expenseDetailsFlux.map(mapper::entityToDto);
     }
 
@@ -238,5 +268,24 @@ public class ExpenseDetailsServiceImpl implements IExpenseDetailsService {
     @Override
     public Mono<String> deleteExpense(String id) {
         return detailsRepository.deleteById(id).then(Mono.just("Expense successfully deleted"));
+    }
+
+    /**
+     * Returns the total record count for the expenses
+     *
+     * @param expenseRequest
+     * @param userId
+     * @return total no of records
+     */
+    @Override
+    public Mono<Integer> getTotalRecordCount(ExpenseRequest expenseRequest, String userId) {
+        MatchOperation matchOperation = Aggregation.match(Criteria.where("userId").is(userId));
+        CountOperation countOperation = Aggregation.count().as("totalCount");
+        Aggregation totalCountAggregation = newAggregation(matchOperation, countOperation);
+        return mongoTemplate.aggregate(totalCountAggregation, "expenseDetails", Document.class)
+                .next() // Get the first result from the aggregation
+                .map(doc -> doc.getInteger("totalCount"))
+                .doOnError(err -> log.info("An error occurred while getting total record count {}", err.getMessage()))
+                .defaultIfEmpty(0);
     }
 }
